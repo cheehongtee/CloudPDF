@@ -1,22 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CloudPDF - Your Cloud-Based PDF Management Solution
+
+This project is a Next.js application providing cloud-based PDF viewing, storage, and tools, integrated with Firebase.
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18.x or later
+- A Firebase account
+
+### Setup Firebase
+
+1. Go to the [Firebase Console](https://console.firebase.google.com/)
+2. Create a new project or use an existing one
+3. Enable Authentication with Email/Password provider
+4. Create a Firestore database in test mode
+
+### Configuration
+
+1. In your Firebase project, go to Project Settings > General
+2. Scroll down to "Your apps" section
+3. Click on the Web app icon (</>) to register a new app if you haven't already
+4. Copy the Firebase configuration object
+
+### Environment Variables
+
+1. Copy the `.env.local.example` file to `.env.local`:
+   ```bash
+   cp .env.local.example .env.local
+   ```
+
+2. Open `.env.local` and replace the placeholder values with your Firebase configuration values.
+
+### Installation
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Run the development server:
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Open [http://localhost:3000](http://localhost:3000) with your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features
+
+- User authentication (login, register, logout)
+- Protected routes
+- Firebase Firestore integration
+- Responsive UI
+
+## Project Structure
+
+- `/src/app`: Next.js app router pages
+- `/src/components`: Reusable components
+- `/src/context`: React context providers
+- `/src/lib`: Utility functions and configurations (Firebase setup)
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
