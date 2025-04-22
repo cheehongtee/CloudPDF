@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { LogOut, LayoutDashboard, FileText, Merge, Scissors } from 'lucide-react';
-import Image from 'next/image';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -23,16 +22,10 @@ export default function Navbar() {
     <nav className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-4">
-            <Link href="/" className="flex items-center">
-              <Image 
-                src="/UOSM_Logo.png" 
-                alt="UOSM Logo" 
-                width={100}
-                height={32}
-                className="h-8 w-auto"
-                style={{ objectFit: 'contain' }}
-              />
+          <div className="flex items-center space-x-6">
+            <Link href="/" className="flex items-center space-x-2 text-2xl font-bold text-blue-600 dark:text-blue-400">
+              <FileText size={24} /> 
+              <span>CloudPDF</span>
             </Link>
             {user && (
               <div className="hidden md:flex space-x-1 items-center border-l border-gray-200 dark:border-gray-700 pl-4">
