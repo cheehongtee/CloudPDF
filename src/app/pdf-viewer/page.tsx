@@ -23,6 +23,18 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 // Import worker from the installed package
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
+// Helper function to convert hex color to RGB object (0-1 range)
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: parseInt(result[1], 16) / 255,
+        g: parseInt(result[2], 16) / 255,
+        b: parseInt(result[3], 16) / 255,
+      }
+    : null;
+}
+
 export default function PdfViewerPage() {
   const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
@@ -39,6 +51,7 @@ export default function PdfViewerPage() {
   const pageContainerRef = useRef<HTMLDivElement>(null);
 
   // Add Text State
+  const [textColor, setTextColor] = useState<string>("#0000FF"); // State for text color, default blue
   const [isAddingText, setIsAddingText] = useState(false);
   const [textInput, setTextInput] = useState({ x: 0, y: 0, value: "", isVisible: false, pageNum: 1 });
   const [isSavingText, setIsSavingText] = useState(false);
@@ -118,32 +131,51 @@ export default function PdfViewerPage() {
     });
   };
 
-  // Add Text to PDF using pdf-lib
+  // Add Text to PDF using pdf-lib (Updated for Color)
   const addTextToPdf = async () => {
-    if (!file || textInput.value.trim() === "" || !pageDetails) return;
+    // Ensure we have the necessary refs and state
+    if (!file || textInput.value.trim() === "" || !pageDetails || !pageContainerRef.current) {
+        console.error("Missing file, text, page details, or container ref for adding text.");
+        setViewerError("Could not add text: Missing required information.");
+        return;
+    }
 
     setIsSavingText(true);
+    setViewerError(null);
 
     try {
       const existingPdfBytes = await file.arrayBuffer();
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
       const pages = pdfDoc.getPages();
+      if (textInput.pageNum < 1 || textInput.pageNum > pages.length) {
+          throw new Error(`Invalid page number: ${textInput.pageNum}`);
+      }
       const targetPage = pages[textInput.pageNum - 1];
+      const { width: originalWidth, height: originalHeight } = targetPage.getSize();
+      const containerRect = pageContainerRef.current.getBoundingClientRect();
+      const renderedWidth = containerRect.width;
+      const renderedHeight = containerRect.height;
+      const scale = originalWidth / renderedWidth;
+      const clickX_in_container = textInput.x;
+      const clickY_in_container = textInput.y;
+      const pdfX = clickX_in_container * scale;
+      const pdfY = originalHeight - (clickY_in_container * scale);
 
-      const { width, height } = targetPage.getSize();
-      const scale = width / pageDetails.width;
-      const renderedHeight = pageContainerRef.current?.getBoundingClientRect().height ?? height;
-      
-      const pdfX = textInput.x * scale;
-      const pdfY = renderedHeight * scale - (textInput.y * scale) - (12 * scale);
+      // Convert selected hex color to RGB for pdf-lib
+      const colorValues = hexToRgb(textColor);
+      if (!colorValues) {
+          throw new Error("Invalid text color selected.");
+      }
+
+      console.log(`Drawing text: '${textInput.value}' at (${pdfX.toFixed(2)}, ${pdfY.toFixed(2)}) with color ${textColor}`);
 
       targetPage.drawText(textInput.value, {
         x: pdfX,
         y: pdfY,
         size: 12,
         font: helveticaFont,
-        color: rgb(0, 0.53, 0.71),
+        color: rgb(colorValues.r, colorValues.g, colorValues.b), // Use converted color
       });
 
       const pdfBytes = await pdfDoc.save();
@@ -153,9 +185,9 @@ export default function PdfViewerPage() {
       setFile(newFile);
       setTextInput({ ...textInput, isVisible: false, value: "" });
       
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to add text to PDF:", err);
-      setViewerError("Could not add text to the PDF.");
+      setViewerError(`Could not add text to the PDF. ${err.message}`);
     } finally {
         setIsSavingText(false);
     }
@@ -232,7 +264,7 @@ export default function PdfViewerPage() {
         <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
           <h1 className="text-2xl font-semibold mb-4 text-center text-gray-800 dark:text-gray-200">CloudPDF Viewer & Uploader</h1>
           
-          <div className="mb-4 flex flex-col sm:flex-row items-center justify-center gap-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-md shadow">
+          <div className="mb-4 flex flex-col sm:flex-row items-center justify-center gap-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-md shadow flex-wrap">
             <input 
               type="file" 
               onChange={handleFileChange} 
@@ -268,6 +300,19 @@ export default function PdfViewerPage() {
             >
               <Type className="mr-2 h-4 w-4" /> {isAddingText ? "Cancel Text" : "Add Text"}
             </Button>
+            {isAddingText && (
+                <div className="flex items-center gap-2 ml-2 border-l pl-4 dark:border-gray-600">
+                   <label htmlFor="textColorPicker" className="text-sm font-medium text-gray-700 dark:text-gray-300">Color:</label>
+                    <input 
+                        type="color" 
+                        id="textColorPicker"
+                        value={textColor}
+                        onChange={(e) => setTextColor(e.target.value)}
+                        className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded cursor-pointer"
+                        title="Select Text Color"
+                    />
+                </div>
+            )}
           </div>
 
           {uploading && (
@@ -321,7 +366,7 @@ export default function PdfViewerPage() {
 
                 {textInput.isVisible && textInput.pageNum === pageNumber && (
                     <div 
-                        className="absolute p-1 bg-white border border-blue-500 shadow-lg rounded" 
+                        className="absolute p-1 bg-white dark:bg-gray-800 border border-blue-500 shadow-lg rounded"
                         style={{ left: `${textInput.x}px`, top: `${textInput.y}px`, zIndex: 10 }}
                     >
                         <textarea 
@@ -329,7 +374,7 @@ export default function PdfViewerPage() {
                             onChange={(e) => setTextInput({ ...textInput, value: e.target.value })}
                             placeholder="Enter text..."
                             autoFocus
-                            className="w-48 h-16 p-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                            className="w-48 h-16 p-1 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm dark:bg-gray-700 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addTextToPdf(); } }}
                         />
                          <div className="mt-1 flex justify-end gap-1">
