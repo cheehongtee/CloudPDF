@@ -7,7 +7,9 @@ import {
   signInWithEmailAndPassword, 
   signOut, 
   onAuthStateChanged,
-  UserCredential
+  UserCredential,
+  signInWithPopup,
+  GoogleAuthProvider
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -18,6 +20,7 @@ interface AuthContextProps {
   login: (email: string, password: string) => Promise<UserCredential>;
   register: (email: string, password: string) => Promise<UserCredential>;
   logout: () => Promise<void>;
+  loginWithGoogle: () => Promise<UserCredential>;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -77,12 +80,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return signOut(auth);
   };
 
+  const loginWithGoogle = async (): Promise<UserCredential> => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const userCredential = await signInWithPopup(auth, provider);
+      const googleUser = userCredential.user;
+      
+      if (googleUser) {
+        const userDocRef = doc(db, "users", googleUser.uid);
+        await setDoc(userDocRef, {
+          uid: googleUser.uid,
+          email: googleUser.email,
+          displayName: googleUser.displayName,
+          photoURL: googleUser.photoURL,
+          createdAt: serverTimestamp(),
+          provider: 'google.com',
+        }, { merge: true });
+        console.log("User document updated/created in Firestore for Google Sign-In UID:", googleUser.uid);
+      }
+      
+      return userCredential;
+    } catch (error) {
+      console.error("Google Sign-In failed:", error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     loading,
     login,
     register,
     logout,
+    loginWithGoogle,
   };
 
   return (

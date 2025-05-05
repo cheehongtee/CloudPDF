@@ -9,7 +9,11 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@firebase/performance": "^0.7.2",
     "@pdftron/pdfjs-express-viewer": "^8.7.5",
+    "@types/qrcode": "^1.5.5",
+    "@types/qrcode.react": "^1.0.5",
+    "@types/speakeasy": "^2.0.10",
     "firebase": "^11.6.0",
     "fs-extra": "^11.3.0",
     "git": "^0.1.5",
@@ -17,11 +21,14 @@
     "next": "15.3.1",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "4.10.38",
+    "qrcode": "^1.5.4",
+    "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.8",
     "react-icons": "^5.5.0",
     "react-pdf": "^9.2.1",
+    "speakeasy": "^2.0.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
